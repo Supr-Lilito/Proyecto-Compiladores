@@ -1,0 +1,9 @@
+-------------------------------------------------------------------------------
+Test set: com.compiler.DfaMinimizationTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.004 sec <<< FAILURE!
+com.compiler.DfaMinimizationTest.testMinimization_abd()  Time elapsed: 0.004 sec  <<< FAILURE!
+java.lang.UnsupportedOperationException: Not implemented
+	at com.compiler.lexer.DfaMinimizer.minimizeDfa(DfaMinimizer.java:60)
+	at com.compiler.DfaMinimizationTest.testMinimization_abd(DfaMinimizationTest.java:29)
+

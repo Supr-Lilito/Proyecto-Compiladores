@@ -1,10 +1,9 @@
 package com.compiler.lexer.regex;
 
-import java.util.Stack;
-
 import com.compiler.lexer.nfa.NFA;
 import com.compiler.lexer.nfa.State;
 import com.compiler.lexer.nfa.Transition;
+import java.util.Stack;
 
 /**
  * RegexParser
@@ -40,8 +39,11 @@ public class RegexParser {
      * @return The constructed NFA.
      */
     public NFA parse(String infixRegex) {
-        String rpnExpression = ShuntingYard.toPostfix(infixRegex);
-        return buildNfaFromPostfix(rpnExpression);
+        // Convert infix to postfix using Shunting-Yard algorithm
+        String postfixRegex = ShuntingYard.toPostfix(infixRegex);
+        
+        // Build NFA from postfix expression
+        return buildNfaFromPostfix(postfixRegex);
     }
 
     /**
@@ -51,37 +53,43 @@ public class RegexParser {
      * @return The constructed NFA.
      */
     private NFA buildNfaFromPostfix(String postfixRegex) {
-        Stack<NFA> automataStack = new Stack<>();
+        Stack<NFA> nfaStack = new Stack<>();
         
-        int idx = 0;
-        while (idx < postfixRegex.length()) {
-            char symbol = postfixRegex.charAt(idx);
-            
-            if (!isOperand(symbol)) {
-                if (symbol == '·') {
-                    handleConcatenation(automataStack);
-                } else if (symbol == '|') {
-                    handleUnion(automataStack);
-                } else if (symbol == '*') {
-                    handleKleeneStar(automataStack);
-                } else if (symbol == '+') {
-                    handlePlus(automataStack);
-                } else if (symbol == '?') {
-                    handleOptional(automataStack);
-                } else {
-                    throw new IllegalArgumentException("Invalid operator encountered: " + symbol);
-                }
+        for (char c : postfixRegex.toCharArray()) {
+            if (isOperand(c)) {
+                // If operand, create basic NFA and push to stack
+                NFA basicNfa = createNfaForCharacter(c);
+                nfaStack.push(basicNfa);
             } else {
-                NFA charNfa = createNfaForCharacter(symbol);
-                automataStack.push(charNfa);
+                // If operator, apply the corresponding operation
+                switch (c) {
+                    case '·':
+                        handleConcatenation(nfaStack);
+                        break;
+                    case '|':
+                        handleUnion(nfaStack);
+                        break;
+                    case '*':
+                        handleKleeneStar(nfaStack);
+                        break;
+                    case '+':
+                        handlePlus(nfaStack);
+                        break;
+                    case '?':
+                        handleOptional(nfaStack);
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Unknown operator: " + c);
+                }
             }
-            idx++;
         }
         
-        if (automataStack.size() == 1) {
-            return automataStack.pop();
+        // The final NFA should be the only element left in the stack
+        if (nfaStack.size() != 1) {
+            throw new IllegalStateException("Invalid postfix expression");
         }
-        throw new IllegalStateException("Malformed postfix expression");
+        
+        return nfaStack.pop();
     }
 
     /**
@@ -90,22 +98,27 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handleOptional(Stack<NFA> stack) {
-        if (stack.size() < 1) {
-            throw new IllegalStateException("Insufficient operands for optional");
+        if (stack.isEmpty()) {
+            throw new IllegalStateException("Stack is empty for optional operation");
         }
         
-        NFA operand = stack.pop();
-        State startNode = new State();
-        State endNode = new State();
+        NFA nfa = stack.pop();
         
-        startNode.transitions.add(new Transition(null, endNode));
-        startNode.transitions.add(new Transition(null, operand.startState));
+        // Create new start and end states
+        State newStart = new State();
+        State newEnd = new State();
         
-        operand.endState.isFinal = false;
-        operand.endState.transitions.add(new Transition(null, endNode));
+        // Add epsilon transition from new start to old start (for one occurrence)
+        newStart.transitions.add(new Transition(null, nfa.startState));
         
-        NFA optionalNfa = new NFA(startNode, endNode);
-        stack.push(optionalNfa);
+        // Add epsilon transition from new start to new end (for zero occurrences)
+        newStart.transitions.add(new Transition(null, newEnd));
+        
+        // Add epsilon transition from old end to new end
+        nfa.endState.transitions.add(new Transition(null, newEnd));
+        nfa.endState.isFinal = false;
+        
+        stack.push(new NFA(newStart, newEnd));
     }
 
     /**
@@ -114,22 +127,28 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handlePlus(Stack<NFA> stack) {
-        if (stack.size() == 0) {
-            throw new IllegalStateException("No operand for plus operator");
+        if (stack.isEmpty()) {
+            throw new IllegalStateException("Stack is empty for plus operation");
         }
         
-        NFA base = stack.pop();
-        State initialState = new State();
-        State finalState = new State();
+        NFA nfa = stack.pop();
         
-        base.endState.transitions.add(new Transition(null, base.startState));
-        base.endState.transitions.add(new Transition(null, finalState));
-        initialState.transitions.add(new Transition(null, base.startState));
+        // Create new start and end states
+        State newStart = new State();
+        State newEnd = new State();
         
-        base.endState.isFinal = false;
+        // Add epsilon transition from new start to old start (for first occurrence)
+        newStart.transitions.add(new Transition(null, nfa.startState));
         
-        NFA plusNfa = new NFA(initialState, finalState);
-        stack.push(plusNfa);
+        // Add epsilon transition from old end to new end (to finish)
+        nfa.endState.transitions.add(new Transition(null, newEnd));
+        
+        // Add epsilon transition from old end to old start (for repetition)
+        nfa.endState.transitions.add(new Transition(null, nfa.startState));
+        
+        nfa.endState.isFinal = false;
+        
+        stack.push(new NFA(newStart, newEnd));
     }
     
     /**
@@ -138,11 +157,13 @@ public class RegexParser {
      * @return The constructed NFA.
      */
     private NFA createNfaForCharacter(char c) {
-        State initialNode = new State();
-        State terminalNode = new State();
-        initialNode.transitions.add(new Transition(c, terminalNode));
-        NFA result = new NFA(initialNode, terminalNode);
-        return result;
+        State start = new State();
+        State end = new State();
+        
+        // Add transition from start to end with the character
+        start.transitions.add(new Transition(c, end));
+        
+        return new NFA(start, end);
     }
 
     /**
@@ -151,18 +172,19 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handleConcatenation(Stack<NFA> stack) {
-        if (stack.size() <= 1) {
-            throw new IllegalStateException("Concatenation requires two operands");
+        if (stack.size() < 2) {
+            throw new IllegalStateException("Not enough NFAs for concatenation");
         }
         
-        NFA rightOperand = stack.pop();
-        NFA leftOperand = stack.pop();
+        NFA second = stack.pop();
+        NFA first = stack.pop();
         
-        leftOperand.endState.isFinal = false;
-        leftOperand.endState.transitions.add(new Transition(null, rightOperand.startState));
+        // Connect the end of first NFA to the start of second NFA with epsilon transition
+        first.endState.transitions.add(new Transition(null, second.startState));
+        first.endState.isFinal = false;
         
-        NFA concatenated = new NFA(leftOperand.startState, rightOperand.endState);
-        stack.push(concatenated);
+        // The result is first's start state and second's end state
+        stack.push(new NFA(first.startState, second.endState));
     }
 
     /**
@@ -171,28 +193,30 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handleUnion(Stack<NFA> stack) {
-        int stackSize = stack.size();
-        if (stackSize < 2) {
-            throw new IllegalStateException("Union needs two operands");
+        if (stack.size() < 2) {
+            throw new IllegalStateException("Not enough NFAs for union");
         }
         
-        NFA alternative2 = stack.pop();
-        NFA alternative1 = stack.pop();
+        NFA second = stack.pop();
+        NFA first = stack.pop();
         
-        State branchStart = new State();
-        State mergeEnd = new State();
+        // Create new start and end states
+        State newStart = new State();
+        State newEnd = new State();
         
-        alternative1.endState.isFinal = false;
-        alternative2.endState.isFinal = false;
+        // Add epsilon transitions from new start to both NFAs' start states
+        newStart.transitions.add(new Transition(null, first.startState));
+        newStart.transitions.add(new Transition(null, second.startState));
         
-        branchStart.transitions.add(new Transition(null, alternative1.startState));
-        branchStart.transitions.add(new Transition(null, alternative2.startState));
+        // Add epsilon transitions from both NFAs' end states to new end state
+        first.endState.transitions.add(new Transition(null, newEnd));
+        second.endState.transitions.add(new Transition(null, newEnd));
         
-        alternative1.endState.transitions.add(new Transition(null, mergeEnd));
-        alternative2.endState.transitions.add(new Transition(null, mergeEnd));
+        // Mark old end states as non-final
+        first.endState.isFinal = false;
+        second.endState.isFinal = false;
         
-        NFA unionResult = new NFA(branchStart, mergeEnd);
-        stack.push(unionResult);
+        stack.push(new NFA(newStart, newEnd));
     }
 
     /**
@@ -201,24 +225,31 @@ public class RegexParser {
      * @param stack The NFA stack.
      */
     private void handleKleeneStar(Stack<NFA> stack) {
-        if (stack.empty()) {
-            throw new IllegalStateException("Kleene star requires an operand");
+        if (stack.isEmpty()) {
+            throw new IllegalStateException("Stack is empty for Kleene star operation");
         }
         
-        NFA input = stack.pop();
+        NFA nfa = stack.pop();
         
-        State newInitial = new State();
-        State newAccepting = new State();
+        // Create new start and end states
+        State newStart = new State();
+        State newEnd = new State();
         
-        newInitial.transitions.add(new Transition(null, newAccepting));
-        newInitial.transitions.add(new Transition(null, input.startState));
+        // Add epsilon transition from new start to old start (for one or more occurrences)
+        newStart.transitions.add(new Transition(null, nfa.startState));
         
-        input.endState.isFinal = false;
-        input.endState.transitions.add(new Transition(null, newAccepting));
-        input.endState.transitions.add(new Transition(null, input.startState));
+        // Add epsilon transition from new start to new end (for zero occurrences)
+        newStart.transitions.add(new Transition(null, newEnd));
         
-        NFA starResult = new NFA(newInitial, newAccepting);
-        stack.push(starResult);
+        // Add epsilon transition from old end to old start (for repetition)
+        nfa.endState.transitions.add(new Transition(null, nfa.startState));
+        
+        // Add epsilon transition from old end to new end (to finish)
+        nfa.endState.transitions.add(new Transition(null, newEnd));
+        
+        nfa.endState.isFinal = false;
+        
+        stack.push(new NFA(newStart, newEnd));
     }
 
     /**
@@ -227,8 +258,7 @@ public class RegexParser {
      * @return True if the character is an operand, false if it is an operator.
      */
     private boolean isOperand(char c) {
-        boolean isOperator = (c == '|' || c == '*' || c == '?' || 
-                             c == '+' || c == '(' || c == ')' || c == '·');
-        return !isOperator;
+        return c != '|' && c != '*' && c != '?' && c != '+' && 
+               c != '(' && c != ')' && c != '·';
     }
 }

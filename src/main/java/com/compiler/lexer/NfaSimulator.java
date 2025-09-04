@@ -1,10 +1,9 @@
 package com.compiler.lexer;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import com.compiler.lexer.nfa.NFA;
 import com.compiler.lexer.nfa.State;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * NfaSimulator
@@ -40,33 +39,35 @@ public class NfaSimulator {
      * @return True if the input is accepted by the NFA, false otherwise.
      */
     public boolean simulate(NFA nfa, String input) {
-        Set<State> activeStates = new HashSet<>();
-        addEpsilonClosure(nfa.startState, activeStates);
+        // Initialize current states with epsilon-closure of NFA start state
+        Set<State> currentStates = new HashSet<>();
+        addEpsilonClosure(nfa.startState, currentStates);
         
-        int charPos = 0;
-        while (charPos < input.length()) {
-            char currentChar = input.charAt(charPos);
-            Set<State> reachableStates = new HashSet<>();
+        // Process each character in the input string
+        for (char c : input.toCharArray()) {
+            Set<State> nextStates = new HashSet<>();
             
-            for (State s : activeStates) {
-                for (State target : s.getTransitions(currentChar)) {
-                    addEpsilonClosure(target, reachableStates);
+            // For each current state
+            for (State state : currentStates) {
+                // For each transition from this state
+                for (State nextState : state.getTransitions(c)) {
+                    // Add epsilon-closure of the destination state
+                    addEpsilonClosure(nextState, nextStates);
                 }
             }
             
-            activeStates = reachableStates;
-            charPos++;
+            // Update current states
+            currentStates = nextStates;
         }
         
-        boolean isAccepted = false;
-        for (State s : activeStates) {
-            if (s.isFinal()) {
-                isAccepted = true;
-                break;
+        // Check if any current state is final
+        for (State state : currentStates) {
+            if (state.isFinal()) {
+                return true;
             }
         }
         
-        return isAccepted;
+        return false;
     }
 
     /**
@@ -76,14 +77,16 @@ public class NfaSimulator {
      * @param closureSet The set to accumulate reachable states.
      */
     private void addEpsilonClosure(State start, Set<State> closureSet) {
-        if (closureSet.contains(start)) {
-            return;
-        }
-        
-        closureSet.add(start);
-        
-        for (State epsReachable : start.getEpsilonTransitions()) {
-            addEpsilonClosure(epsReachable, closureSet);
+        // If start is not already in the closure set
+        if (!closureSet.contains(start)) {
+            // Add start to closure set
+            closureSet.add(start);
+            
+            // For each epsilon transition from start
+            for (State epsilonState : start.getEpsilonTransitions()) {
+                // Recursively add epsilon-closure of destination state
+                addEpsilonClosure(epsilonState, closureSet);
+            }
         }
     }
 }

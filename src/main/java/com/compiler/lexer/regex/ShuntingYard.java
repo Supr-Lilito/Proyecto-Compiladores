@@ -30,35 +30,38 @@ public class ShuntingYard {
      * @return Regular expression with explicit concatenation operators.
      */
     public static String insertConcatenationOperator(String regex) {
-        if (regex == null) {
-            return regex;
-        }
-        if (regex.isEmpty()) {
+        if (regex == null || regex.isEmpty()) {
             return regex;
         }
         
-        StringBuilder result = new StringBuilder();
-        int position = 0;
+        StringBuilder output = new StringBuilder();
         
-        while (position < regex.length()) {
-            char ch = regex.charAt(position);
-            result.append(ch);
+        for (int i = 0; i < regex.length(); i++) {
+            char current = regex.charAt(i);
+            output.append(current);
             
-            if (position + 1 < regex.length()) {
-                char nextChar = regex.charAt(position + 1);
+            // Check if we need to insert concatenation operator
+            if (i < regex.length() - 1) {
+                char next = regex.charAt(i + 1);
                 
-                boolean firstCondition = (isOperand(ch) || ch == ')' || 
-                                         ch == '*' || ch == '+' || ch == '?');
-                boolean secondCondition = (isOperand(nextChar) || nextChar == '(');
+                // Insert concatenation if:
+                // - current is operand or ')' or '*' or '+' or '?'
+                // - AND next is operand or '('
+                boolean needsConcatenation = false;
                 
-                if (firstCondition && secondCondition) {
-                    result.append('·');
+                if ((isOperand(current) || current == ')' || current == '*' || 
+                     current == '+' || current == '?') &&
+                    (isOperand(next) || next == '(')) {
+                    needsConcatenation = true;
+                }
+                
+                if (needsConcatenation) {
+                    output.append('·');
                 }
             }
-            position++;
         }
         
-        return result.toString();
+        return output.toString();
     }
 
     /**
@@ -69,16 +72,8 @@ public class ShuntingYard {
      * @return true if it is an operand, false otherwise.
      */
     private static boolean isOperand(char c) {
-        boolean isUnion = (c == '|');
-        boolean isStar = (c == '*');
-        boolean isOptional = (c == '?');
-        boolean isPlus = (c == '+');
-        boolean isLeftParen = (c == '(');
-        boolean isRightParen = (c == ')');
-        boolean isConcat = (c == '·');
-        
-        return !(isUnion || isStar || isOptional || isPlus || 
-                isLeftParen || isRightParen || isConcat);
+        return c != '|' && c != '*' && c != '?' && c != '+' && 
+               c != '(' && c != ')' && c != '·';
     }
 
     /**
@@ -90,56 +85,53 @@ public class ShuntingYard {
      * @return Regular expression in postfix notation.
      */
     public static String toPostfix(String infixRegex) {
-        Map<Character, Integer> operatorPrecedence = new HashMap<>();
-        operatorPrecedence.put('|', 1);
-        operatorPrecedence.put('·', 2);
-        operatorPrecedence.put('*', 3);
-        operatorPrecedence.put('+', 3);
-        operatorPrecedence.put('?', 3);
+        // Define operator precedence (higher number = higher precedence)
+        Map<Character, Integer> precedence = new HashMap<>();
+        precedence.put('|', 1);  // Union has lowest precedence
+        precedence.put('·', 2);  // Concatenation has medium precedence
+        precedence.put('*', 3);  // Kleene star has highest precedence
+        precedence.put('+', 3);  // Plus has highest precedence
+        precedence.put('?', 3);  // Optional has highest precedence
         
-        String withExplicitConcat = insertConcatenationOperator(infixRegex);
+        // Preprocess to insert explicit concatenation operators
+        String preprocessed = insertConcatenationOperator(infixRegex);
         
-        Stack<Character> operators = new Stack<>();
-        StringBuilder postfixResult = new StringBuilder();
+        StringBuilder output = new StringBuilder();
+        Stack<Character> operatorStack = new Stack<>();
         
-        int charIndex = 0;
-        while (charIndex < withExplicitConcat.length()) {
-            char token = withExplicitConcat.charAt(charIndex);
-            
-            if (isOperand(token)) {
-                postfixResult.append(token);
-            } else if (token == '(') {
-                operators.push(token);
-            } else if (token == ')') {
-                while (operators.size() > 0 && operators.peek() != '(') {
-                    postfixResult.append(operators.pop());
+        for (char c : preprocessed.toCharArray()) {
+            if (isOperand(c)) {
+                // If operand, add to output
+                output.append(c);
+            } else if (c == '(') {
+                // If left parenthesis, push to stack
+                operatorStack.push(c);
+            } else if (c == ')') {
+                // If right parenthesis, pop operators until left parenthesis
+                while (!operatorStack.isEmpty() && operatorStack.peek() != '(') {
+                    output.append(operatorStack.pop());
                 }
-                if (operators.size() > 0) {
-                    operators.pop();
+                // Remove the left parenthesis
+                if (!operatorStack.isEmpty()) {
+                    operatorStack.pop();
                 }
-            } else if (operatorPrecedence.containsKey(token)) {
-                while (operators.size() > 0) {
-                    char topOp = operators.peek();
-                    if (topOp == '(') {
-                        break;
-                    }
-                    if (!operatorPrecedence.containsKey(topOp)) {
-                        break;
-                    }
-                    if (operatorPrecedence.get(topOp) < operatorPrecedence.get(token)) {
-                        break;
-                    }
-                    postfixResult.append(operators.pop());
+            } else if (precedence.containsKey(c)) {
+                // If operator, pop operators with higher or equal precedence
+                while (!operatorStack.isEmpty() && 
+                       operatorStack.peek() != '(' &&
+                       precedence.containsKey(operatorStack.peek()) &&
+                       precedence.get(operatorStack.peek()) >= precedence.get(c)) {
+                    output.append(operatorStack.pop());
                 }
-                operators.push(token);
+                operatorStack.push(c);
             }
-            charIndex++;
         }
         
-        while (operators.size() > 0) {
-            postfixResult.append(operators.pop());
+        // Pop remaining operators
+        while (!operatorStack.isEmpty()) {
+            output.append(operatorStack.pop());
         }
         
-        return postfixResult.toString();
+        return output.toString();
     }
 }

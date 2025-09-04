@@ -1,6 +1,7 @@
 package com.compiler.lexer;
 
 import com.compiler.lexer.dfa.DFA;
+import com.compiler.lexer.dfa.DfaState;
 
 /**
  * DfaSimulator
@@ -18,16 +19,14 @@ import com.compiler.lexer.dfa.DFA;
  *     boolean accepted = simulator.simulate(dfa, "inputString");
  * </pre>
  */
-/**
- * Simulator for running input strings on a DFA.
- */
 public class DfaSimulator {
     /**
      * Default constructor for DfaSimulator.
      */
-        public DfaSimulator() {
-            // TODO: Implement constructor if needed
-        }
+    public DfaSimulator() {
+        // Constructor doesn't need specific implementation
+    }
+    
     /**
      * Simulates the DFA on the given input string.
      * Starts at the DFA's start state and processes each character, following transitions.
@@ -38,15 +37,24 @@ public class DfaSimulator {
      * @return True if the input is accepted by the DFA, false otherwise.
      */
     public boolean simulate(DFA dfa, String input) {
-       // TODO: Implement simulate
-       /*
-        Pseudocode:
-        1. Set currentState to DFA start state
-        2. For each character in input:
-            - Get next state using transition for character
-            - If no transition exists, return false
-        3. After processing all characters, return true if currentState is final
-       */
-       throw new UnsupportedOperationException("Not implemented");
+        // Step 1: Set currentState to DFA start state
+        DfaState currentState = dfa.getStartState();
+        
+        // Step 2: For each character in input
+        for (char c : input.toCharArray()) {
+            // Get next state using transition for character
+            DfaState nextState = currentState.getTransition(c);
+            
+            // If no transition exists, return false
+            if (nextState == null) {
+                return false;
+            }
+            
+            // Move to the next state
+            currentState = nextState;
+        }
+        
+        // Step 3: After processing all characters, return true if currentState is final
+        return currentState.isFinal();
     }
 }

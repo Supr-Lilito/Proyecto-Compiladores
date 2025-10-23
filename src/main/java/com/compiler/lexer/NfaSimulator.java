@@ -1,9 +1,11 @@
 package com.compiler.lexer;
 
-import com.compiler.lexer.nfa.NFA;
-import com.compiler.lexer.nfa.State;
 import java.util.HashSet;
 import java.util.Set;
+
+import com.compiler.lexer.nfa.NFA;
+import com.compiler.lexer.nfa.State;
+import com.compiler.lexer.nfa.Transition;
 
 /**
  * NfaSimulator
@@ -21,13 +23,14 @@ import java.util.Set;
  * The class also provides a helper method to compute the ε-closure of a given state, which is the set of all states
  * reachable from the given state using only ε-transitions.
  */
+/**
+ * Simulator for running input strings on an NFA.
+ */
 public class NfaSimulator {
     /**
      * Default constructor for NfaSimulator.
      */
-    public NfaSimulator() {
-        // Constructor doesn't need specific implementation
-    }
+    public NfaSimulator() {}
 
     /**
      * Simulates the NFA on the given input string.
@@ -39,35 +42,34 @@ public class NfaSimulator {
      * @return True if the input is accepted by the NFA, false otherwise.
      */
     public boolean simulate(NFA nfa, String input) {
-        // Initialize current states with epsilon-closure of NFA start state
+        // The set of states we are currently in
         Set<State> currentStates = new HashSet<>();
+        // Initialize with the epsilon-closure of the NFA's start state
         addEpsilonClosure(nfa.startState, currentStates);
-        
-        // Process each character in the input string
+
+        // Process each character of the input string
         for (char c : input.toCharArray()) {
             Set<State> nextStates = new HashSet<>();
-            
-            // For each current state
+            // For each current state, compute the next states
             for (State state : currentStates) {
-                // For each transition from this state
-                for (State nextState : state.getTransitions(c)) {
-                    // Add epsilon-closure of the destination state
-                    addEpsilonClosure(nextState, nextStates);
+                for (Transition t : state.transitions) {
+                    if (t.symbol != null && t.symbol == c) {
+                        // Add the epsilon-closure of the destination state
+                        addEpsilonClosure(t.toState, nextStates);
+                    }
                 }
             }
-            
-            // Update current states
             currentStates = nextStates;
         }
-        
-        // Check if any current state is final
+
+        // After processing the entire string, check if any of the current states is a final state of the NFA
         for (State state : currentStates) {
-            if (state.isFinal()) {
-                return true;
+            if (state.isFinal) {
+                return true; // The string is accepted!
             }
         }
-        
-        return false;
+
+        return false; // The string is rejected
     }
 
     /**
@@ -77,15 +79,13 @@ public class NfaSimulator {
      * @param closureSet The set to accumulate reachable states.
      */
     private void addEpsilonClosure(State start, Set<State> closureSet) {
-        // If start is not already in the closure set
-        if (!closureSet.contains(start)) {
-            // Add start to closure set
-            closureSet.add(start);
-            
-            // For each epsilon transition from start
-            for (State epsilonState : start.getEpsilonTransitions()) {
-                // Recursively add epsilon-closure of destination state
-                addEpsilonClosure(epsilonState, closureSet);
+        if (closureSet.contains(start)) {
+            return;
+        }
+        closureSet.add(start);
+        for (Transition t : start.transitions) {
+            if (t.symbol == null) { // Epsilon transition
+                addEpsilonClosure(t.toState, closureSet);
             }
         }
     }

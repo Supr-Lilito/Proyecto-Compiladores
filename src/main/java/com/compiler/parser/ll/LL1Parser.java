@@ -3,6 +3,8 @@ package com.compiler.parser.ll;
 import java.util.List;
 
 import com.compiler.lexer.Token;
+import com.compiler.parser.grammar.Production;
+import com.compiler.parser.grammar.Symbol;
 
 /**
  * Implements the LL(1) predictive parsing engine using the parsing table.
@@ -21,23 +23,63 @@ public class LL1Parser {
      * @return true if the string is accepted, false otherwise.
      */
     public boolean parse(List<Token> tokens) {
-        // Pseudocode for LL(1) parser driver:
-        // 1. Initialize a stack and push the start symbol.
-        // 2. Set an input pointer to the first token.
-        // 3. While the stack is not empty:
-        //    a. Peek the top of the stack (X).
-        //    b. If X is a terminal:
-        //        i. If X matches the current input token, pop X and advance the input pointer.
-        //        ii. Else, reject (return false).
-        //    c. If X is a non-terminal:
-        //        i. Consult the parsing table with (X, current token).
-        //        ii. If there is a production:
-        //            - Pop X.
-        //            - Push the production's right-hand side symbols onto the stack in reverse order.
-        //        iii. Else, reject (return false).
-        //    d. If X is epsilon, pop X (do not advance input).
-        // 4. If the stack is empty and all input tokens have been consumed, accept (return true).
-        // 5. Else, reject (return false).
-        throw new UnsupportedOperationException("Not implemented");
+        // Create a working stack of Symbols. We'll use the grammar Symbol objects.
+        java.util.Deque<Symbol> stack = new java.util.ArrayDeque<>();
+
+        // Start symbol from the table
+        Symbol start = table.getStartSymbol();
+        if (start == null) return false;
+
+        // push end marker '$' and start symbol
+        Symbol dollar = new com.compiler.parser.grammar.Symbol("$", com.compiler.parser.grammar.SymbolType.TERMINAL);
+        stack.push(dollar);
+        stack.push(start);
+
+        // Input pointer: tokens plus an end marker token. We will map Token.type to terminal Symbol.name
+        int ip = 0;
+        java.util.List<Token> input = new java.util.ArrayList<>(tokens);
+        // Append a special end token with type "$"
+        input.add(new Token("$", "$"));
+
+        while (!stack.isEmpty()) {
+            Symbol X = stack.peek();
+            Token a = input.get(ip);
+
+            if (X.type == com.compiler.parser.grammar.SymbolType.TERMINAL) {
+                // match terminals by name: Symbol.name should equal token.type
+                if (X.name.equals(a.type)) {
+                    // consume
+                    stack.pop();
+                    ip++;
+                } else if (X.name.equals("ε")) {
+                    // epsilon: just pop
+                    stack.pop();
+                } else {
+                    return false; // terminal mismatch
+                }
+            } else {
+                // non-terminal: consult table using (X, a)
+                Symbol termSym = new Symbol(a.type, com.compiler.parser.grammar.SymbolType.TERMINAL);
+                Production p = table.getProduction(X, termSym);
+                if (p == null) return false; // error
+
+                // apply production: pop X and push RHS in reverse
+                stack.pop();
+                java.util.List<Symbol> rhs = p.getRight();
+                // if rhs is empty or epsilon, do nothing
+                if (rhs != null && !rhs.isEmpty()) {
+                    // push in reverse
+                    for (int i = rhs.size() - 1; i >= 0; i--) {
+                        Symbol s = rhs.get(i);
+                        // treat explicit epsilon symbol as no-op
+                        if (s.name.equals("ε")) continue;
+                        stack.push(s);
+                    }
+                }
+            }
+        }
+
+        // accept if input consumed except the appended $ (we advanced past $)
+        return ip == input.size();
     }
 }

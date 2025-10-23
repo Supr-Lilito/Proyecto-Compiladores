@@ -1,10 +1,10 @@
 package com.compiler.lexer.dfa;
 
-import com.compiler.lexer.nfa.State;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
+
+import com.compiler.lexer.nfa.State;
 
 /**
  * DfaState
@@ -14,23 +14,30 @@ import java.util.Set;
  * Provides methods for managing transitions, checking finality, and equality based on NFA state sets.
  */
 public class DfaState {
+    /**
+     * El nombre del tipo de token reconocido si este estado es final. Puede ser null o una lista si hay conflicto.
+     */
+    public String tokenTypeName;
+    /**
+     * Returns all transitions from this state.
+     * @return Map of input symbols to destination DFA states.
+     */
+    public Map<Character, DfaState> getTransitions() {
+        return transitions;
+    }
     private static int nextId = 0;
-    
     /**
      * Unique identifier for this DFA state.
      */
     public final int id;
-    
     /**
      * The set of NFA states this DFA state represents.
      */
     public final Set<State> nfaStates;
-    
     /**
      * Indicates whether this DFA state is a final (accepting) state.
      */
     public boolean isFinal;
-    
     /**
      * Map of input symbols to destination DFA states (transitions).
      */
@@ -41,10 +48,11 @@ public class DfaState {
      * @param nfaStates The set of NFA states that this DFA state represents.
      */
     public DfaState(Set<State> nfaStates) {
-        this.id = nextId++;
-        this.nfaStates = nfaStates;
-        this.isFinal = false;
-        this.transitions = new HashMap<>();
+    this.id = nextId++;
+    this.nfaStates = nfaStates;
+    this.isFinal = false; // This will be determined after all states are created
+    this.transitions = new HashMap<>();
+    this.tokenTypeName = null;
     }
 
     /**
@@ -53,15 +61,7 @@ public class DfaState {
      * @param toState The destination DFA state.
      */
     public void addTransition(Character symbol, DfaState toState) {
-        transitions.put(symbol, toState);
-    }
-
-    /**
-     * Returns all transitions from this state.
-     * @return Map of input symbols to destination DFA states.
-     */
-    public Map<Character, DfaState> getTransitions() {
-        return transitions;
+        this.transitions.put(symbol, toState);
     }
 
     /**
@@ -71,14 +71,10 @@ public class DfaState {
      */
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null || getClass() != obj.getClass()) {
-            return false;
-        }
-        DfaState dfaState = (DfaState) obj;
-        return Objects.equals(nfaStates, dfaState.nfaStates);
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        DfaState other = (DfaState) obj;
+        return nfaStates.equals(other.nfaStates);
     }
 
     /**
@@ -87,7 +83,7 @@ public class DfaState {
      */
     @Override
     public int hashCode() {
-        return Objects.hash(nfaStates);
+        return nfaStates.hashCode();
     }
     
     /**
@@ -96,11 +92,7 @@ public class DfaState {
      */
     @Override
     public String toString() {
-        return "DfaState{" +
-                "id=" + id +
-                ", isFinal=" + isFinal +
-                ", nfaStates=" + nfaStates.size() + " states" +
-                '}';
+        return "D" + id + " " + (isFinal ? "(Final)" : "");
     }
 
     /**
@@ -116,7 +108,7 @@ public class DfaState {
      * @return True if this state is a final state, false otherwise.
      */
     public boolean isFinal() {
-        return this.isFinal;
+        return isFinal;
     }
 
     /**
@@ -133,14 +125,6 @@ public class DfaState {
      * @return The set of NFA states.
      */
     public Set<State> getName() {
-        return nfaStates;
-    }
-
-    /**
-     * Returns the set of NFA states this DFA state represents.
-     * @return The set of NFA states.
-     */
-    public Set<State> getNfaStates() {
         return nfaStates;
     }
 }

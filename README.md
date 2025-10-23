@@ -16,7 +16,7 @@ This repository contains the source code for a compiler built incrementally thro
 
 This project is built incrementally. The current status of the implemented phases is as follows:
 
-* [ ] **Phase 1: Lexical Analysis (Scanner)** - Converts a stream of characters into a sequence of tokens.
+* [x] **Phase 1: Lexical Analysis (Scanner)** - Converts a stream of characters into a sequence of tokens.
 * [ ] **Phase 2: Syntactic Analysis (Parser)** - Validates the structure and builds an Abstract Syntax Tree (AST).
 * [ ] **Phase 3: Semantic Analysis** - Performs type and scope checking on the AST.
 * [ ] **Phase 4: Intermediate Code Generation** - Translates the AST into three-address code.
@@ -39,14 +39,42 @@ The source code is organized into packages that reflect the different phases and
 
 ```
 com.compiler
-├── Main.java           // Main entry point that orchestrates the phases
-├── lexer/              // Components for the Lexical Analyzer (Scanner)
+├── Main.java                       // Main entry point that orchestrates the phases
+├── lexer/                          // Lexical analysis implementation
 │   ├── Token.java
-│   └── Lexer.java
-├── parser/             // Components for the Syntactic Analyzer
-│   └── Parser.java
-├── ast/                // Classes for the Abstract Syntax Tree nodes
-└── ...                 // Packages for future phases (semantic, codegen, etc.)
+│   ├── LexerBuilder.java
+│   ├── NfaToDfaConverter.java
+│   ├── NfaSimulator.java
+│   ├── DfaSimulator.java
+│   ├── DfaMinimizer.java
+│   └── regex/                      // Regex utilities for lexer
+│       ├── ShuntingYard.java
+│       └── RegexParser.java
+│   ├── nfa/                        // NFA data structures
+│   │   ├── NFA.java
+│   │   ├── State.java
+│   │   └── Transition.java
+│   └── dfa/                        // DFA data structures
+│       ├── DFA.java
+│       └── DfaState.java
+├── parser/                         // Parsing and grammar components
+│   ├── grammar/                    // Grammar model and productions
+│   │   ├── Grammar.java
+│   │   ├── Production.java
+│   │   ├── Symbol.java
+│   │   └── SymbolType.java
+│   ├── lr/                         // LR parsing helpers and tables
+│   │   ├── LRAutomaton.java
+│   │   ├── LR0Item.java
+│   │   ├── LALR1Table.java
+│   │   └── LALR1Parser.java
+│   └── ll/                         // LL(1) parsing support
+│       ├── LL1Table.java
+│       └── LL1Parser.java
+│   └── syntax/
+│       └── StaticAnalyzer.java    // (early static analysis helpers)
+├── ast/                            // Abstract Syntax Tree node classes (TBD)
+└── ...                             // Packages for future phases (semantic, codegen, etc.)
 ```
 
 ---

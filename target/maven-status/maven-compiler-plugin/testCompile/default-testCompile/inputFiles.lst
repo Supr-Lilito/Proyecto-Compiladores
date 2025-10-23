@@ -1,4 +1,9 @@
-/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/TokenGeneratorTest.java
-/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/RegexTest.java
-/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/DfaMinimizationTest.java
-/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/StaticAnalyzerTest.java
+/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/parser/lr/LALR1ParserTest.java
+/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/lexer/TokenizerTest.java
+/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/parser/lr/LALR1TableTest.java
+/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/parser/StaticAnalyzerTest.java
+/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/lexer/RegexTest.java
+/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/lexer/DfaMinimizationTest.java
+/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/parser/ll/LL1ParserTest.java
+/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/lexer/LexerBuilderTest.java
+/home/lilito/Documents/ciencias/semestre7/compiladores/proyecto/src/test/java/com/compiler/lexer/ComplexRegexTest.java

@@ -18,7 +18,13 @@ public class LL1Table {
     public LL1Table(StaticAnalyzer analyzer) {
         this.analyzer = analyzer;
         this.table = new java.util.HashMap<>();
-        // TODO: Initialize the table structure
+        // initialize an empty inner map for every non-terminal known from productions
+        for (com.compiler.parser.grammar.Production p : analyzer.getProductions()) {
+            Symbol nt = p.getLeft();
+            if (nt.type == com.compiler.parser.grammar.SymbolType.NON_TERMINAL) {
+                table.computeIfAbsent(nt, k -> new java.util.HashMap<>());
+            }
+        }
     }
 
     /**
@@ -44,8 +50,63 @@ public class LL1Table {
      * 2. After filling, the table M can be used for parsing.
      */
     public void build() {
-        // TODO: Implement the LL(1) table construction algorithm as described above.
-        throw new UnsupportedOperationException("Not implemented");
+        java.util.Map<Symbol, java.util.Set<Symbol>> first = analyzer.getFirstSets();
+        java.util.Map<Symbol, java.util.Set<Symbol>> follow = analyzer.getFollowSets();
+
+        // epsilon symbol used in StaticAnalyzer/Grammar is "ε"
+        Symbol epsilon = new Symbol("ε", com.compiler.parser.grammar.SymbolType.TERMINAL);
+
+        for (com.compiler.parser.grammar.Production p : analyzer.getProductions()) {
+            Symbol A = p.getLeft();
+            java.util.List<Symbol> rhs = p.getRight();
+
+            // Compute FIRST(alpha) for the production's rhs
+            java.util.Set<Symbol> firstAlpha = new java.util.HashSet<>();
+            boolean allNullable = true;
+            for (Symbol X : rhs) {
+                java.util.Set<Symbol> firstX = first.get(X);
+                if (firstX != null) {
+                    for (Symbol s : firstX) {
+                        firstAlpha.add(s);
+                    }
+                    if (!firstX.contains(epsilon)) {
+                        allNullable = false;
+                        break;
+                    }
+                } else {
+                    // If there is no FIRST set for X, assume it's non-nullable terminal
+                    allNullable = false;
+                    break;
+                }
+            }
+
+            // For each terminal a in FIRST(alpha) except epsilon, set M[A,a] = p
+            java.util.Map<Symbol, Production> row = table.computeIfAbsent(A, k -> new java.util.HashMap<>());
+            for (Symbol a : firstAlpha) {
+                if (a.equals(epsilon)) continue;
+                Production existing = row.get(a);
+                if (existing == null) {
+                    row.put(a, p);
+                } else if (!existing.equals(p)) {
+                    throw new IllegalStateException("Grammar is not LL(1): conflict at M[" + A.name + "," + a.name + "] between productions " + existing + " and " + p);
+                }
+            }
+
+            // If epsilon is in FIRST(alpha), then for each b in FOLLOW(A) set M[A,b] = p
+            if (allNullable || firstAlpha.contains(epsilon)) {
+                java.util.Set<Symbol> followA = follow.get(A);
+                if (followA != null) {
+                    for (Symbol b : followA) {
+                        Production existing = row.get(b);
+                        if (existing == null) {
+                            row.put(b, p);
+                        } else if (!existing.equals(p)) {
+                            throw new IllegalStateException("Grammar is not LL(1): conflict at M[" + A.name + "," + b.name + "] between productions " + existing + " and " + p);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -55,11 +116,18 @@ public class LL1Table {
      * @return The production to apply, or null if it is an error.
      */
     public Production getProduction(Symbol nonTerminal, Symbol terminal) {
-        // TODO: Implement the table lookup.
-        // General structure:
-        // 1. Lookup the inner map for the given nonTerminal.
-        // 2. If found, lookup the production for the given terminal.
-        // 3. Return the production, or null if not found.
-        throw new UnsupportedOperationException("Not implemented");
+        java.util.Map<Symbol, Production> row = table.get(nonTerminal);
+        if (row == null) return null;
+        return row.get(terminal);
+    }
+
+    /**
+     * Returns the start symbol of the grammar associated with this table.
+     */
+    public Symbol getStartSymbol() {
+        // Use the left-hand side of the first production as the start symbol
+        java.util.List<Production> prods = analyzer.getProductions();
+        if (prods == null || prods.isEmpty()) return null;
+        return prods.get(0).getLeft();
     }
 }

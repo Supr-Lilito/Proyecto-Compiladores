@@ -1,2 +1,9 @@
-com/compiler/DfaMinimizationTest.class
-com/compiler/RegexTest.class
+com/compiler/lexer/ComplexRegexTest.class
+com/compiler/parser/lr/LALR1ParserTest.class
+com/compiler/lexer/LexerBuilderTest.class
+com/compiler/lexer/RegexTest.class
+com/compiler/parser/StaticAnalyzerTest.class
+com/compiler/parser/lr/LALR1TableTest.class
+com/compiler/lexer/DfaMinimizationTest.class
+com/compiler/parser/ll/LL1ParserTest.class
+com/compiler/lexer/TokenizerTest.class

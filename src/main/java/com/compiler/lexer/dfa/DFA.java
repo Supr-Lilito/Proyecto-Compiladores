@@ -29,28 +29,4 @@ public class DFA {
         this.startState = startState;
         this.allStates = allStates;
     }
-
-    /**
-     * Returns the starting state of the DFA.
-     * @return The start state.
-     */
-    public DfaState getStartState() {
-        return startState;
-    }
-
-    /**
-     * Returns all states in the DFA.
-     * @return List of all DFA states.
-     */
-    public List<DfaState> getAllStates() {
-        return allStates;
-    }
-
-    /**
-     * Returns all states in the DFA (alternative method name for compatibility).
-     * @return List of all DFA states.
-     */
-    public List<DfaState> getStates() {
-        return allStates;
-    }
 }
